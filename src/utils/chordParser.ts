@@ -1,3 +1,12 @@
+import { loadChordDefinitions, ChordDefinition } from './chordFileParser';
+
+let chordDefinitions: ChordDefinition[] = [];
+
+// Load chord definitions when the module is loaded
+loadChordDefinitions().then(definitions => {
+  chordDefinitions = definitions;
+});
+
 // Define basic chord patterns
 const chordPatterns = {
   // Major chords (both international and Italian)
@@ -116,11 +125,23 @@ const italianNotes = ['DO', 'DO#', 'RE', 'RE#', 'MI', 'FA', 'FA#', 'SOL', 'SOL#'
 // Function to check if a string is a chord
 export const isChord = (word: string): boolean => {
   word = word.trim();
+  // First, check against the loaded chord definitions
+  if (chordDefinitions.some(def => def.chord_it === word || def.chord_en === word)) {
+    return true;
+  }
+  // Fallback to regex patterns if not found in CSV (optional, or remove if CSV is comprehensive)
+  // console.log(`Chord ${word} not found in CSV, checking regex patterns`);
+  word = word.trim();
   
   // Check against all patterns
   return Object.values(chordPatterns).some(patterns => 
     patterns.some(pattern => pattern.test(word))
   );
+};
+
+// Function to get chord data from definitions
+export const getChordData = (chordName: string): ChordDefinition | undefined => {
+  return chordDefinitions.find(def => def.chord_it === chordName || def.chord_en === chordName);
 };
 
 // Function to parse a note from a chord

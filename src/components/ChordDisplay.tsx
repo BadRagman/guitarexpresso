@@ -6,7 +6,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Music, FileWarning, AlertTriangle } from "lucide-react";
-import { transposeLine } from "@/utils/chordParser";
+import { transposeLine, getChordData } from "@/utils/chordParser";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Assuming you have a Tooltip component
 
 interface ChordDisplayProps {
   songData: SongData;
@@ -90,7 +91,38 @@ const ChordDisplay: React.FC<ChordDisplayProps> = ({
                         {line.tag}
                       </Badge>
                     )}
-                    <span className="text-primary font-semibold">{line.content}</span>
+                    <span className="text-primary font-semibold">
+                      {line.content.split(/(\s+)/).map((segment, segmentIndex) => {
+                        if (segment.match(/^\s+$/)) { // If the segment is purely whitespace
+                          return <span key={`space-${segmentIndex}`}>{segment}</span>;
+                        }
+                        const chordData = getChordData(segment.trim());
+                        if (chordData) {
+                          return (
+                            <TooltipProvider key={`chord-segment-${segmentIndex}`}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-pointer hover:underline">{segment}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p><strong>{chordData.chord_it} / {chordData.chord_en}</strong></p>
+                                  <p>Diteggiatura: {chordData.fingering}</p>
+                                  {chordData.alternative_fingerings && chordData.alternative_fingerings.length > 0 && (
+                                    <p>Alternative: {chordData.alternative_fingerings.join(', ')}</p>
+                                  )}
+                                  {chordData.diagram_url && 
+                                    <img src={chordData.diagram_url} alt={`${chordData.chord_en} diagram`} className="w-32 h-auto mt-2" />
+                                  }
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        } else if (segment.trim().length > 0) { // Render non-chord, non-empty segments as text
+                            return <span key={`text-segment-${segmentIndex}`}>{segment}</span>;
+                        }
+                        return null; // Ignore empty segments that are not whitespace
+                      })}
+                    </span>
                   </div>
                 );
               } else {

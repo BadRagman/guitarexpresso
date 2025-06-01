@@ -47,14 +47,16 @@ const MySongs = () => {
   }, [user]);
   
   const handleDelete = async (songId: string) => {
-    if (user) {
-      deleteMutation.mutate(songId);
-    } else {
-      // Handle local storage deletion
-      const updatedSongs = localSongs.filter(song => song.id !== songId);
-      setLocalSongs(updatedSongs);
-      localStorage.setItem("songs", JSON.stringify(updatedSongs));
-      toast.success("Canzone eliminata");
+    if (window.confirm("Sei sicuro di voler eliminare questa canzone?")) {
+      if (user) {
+        deleteMutation.mutate(songId);
+      } else {
+        // Handle local storage deletion
+        const updatedSongs = localSongs.filter(song => song.id !== songId);
+        setLocalSongs(updatedSongs);
+        localStorage.setItem("songs", JSON.stringify(updatedSongs));
+        toast.success("Canzone eliminata");
+      }
     }
   };
 

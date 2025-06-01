@@ -39,4 +39,5 @@ const App = () => (
   </QueryClientProvider>
 );
 
+// Force recompile after manual server restart
 export default App;

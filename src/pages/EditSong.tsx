@@ -7,7 +7,7 @@ import { SongData } from "@/utils/fileParser";
 import { toast } from "sonner";
 import { SongService } from "@/services/SongService";
 import { useAuth } from "@/context/AuthContext";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Song extends SongData {
   id: string;
@@ -18,6 +18,7 @@ const EditSong = () => {
   const [song, setSong] = useState<Song | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   // Fetch song from Supabase if user is logged in
   const { data: supabaseSong, isLoading: isLoadingSupabase } = useQuery({
@@ -57,6 +58,12 @@ const EditSong = () => {
       }
     }
   }, [songId, user]);
+  
+  useEffect(() => {
+    return () => {
+      queryClient.cancelQueries(['song', songId]);
+    };
+  }, [songId, queryClient]);
   
   const handleSaveEdits = async (title: string, artist: string, bpm: string, lines: { isChordLine: boolean, content: string, tag?: string }[]) => {
     if (!song) return;

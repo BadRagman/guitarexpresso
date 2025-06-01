@@ -31,6 +31,8 @@ const SongEditor: React.FC<SongEditorProps> = ({
   const [content, setContent] = useState(initialContent);
   const [lines, setLines] = useState<Array<{ content: string, isChordLine: boolean, tag?: string }>>([]);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const styledDisplayRef = React.useRef<HTMLDivElement>(null);
+  const [lineHeightPx] = useState(20); // Corresponds to text-sm line-height (1.25rem)
 
   // Process content into lines on initial load and when content changes
   useEffect(() => {
@@ -48,6 +50,35 @@ const SongEditor: React.FC<SongEditorProps> = ({
     setLines(newProcessedLines);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]); // Riprocessa solo se il contenuto grezzo della textarea cambia
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    const display = styledDisplayRef.current;
+    if (ta && display) {
+      const syncScroll = () => {
+        if (display) {
+          display.scrollTop = ta.scrollTop;
+          display.scrollLeft = ta.scrollLeft;
+        }
+      };
+      ta.addEventListener('scroll', syncScroll);
+      // Initial sync
+      syncScroll();
+      return () => {
+        ta.removeEventListener('scroll', syncScroll);
+      };
+    }
+  }, []); // Setup scroll listener once
+
+  useEffect(() => {
+    // Re-sync scroll if lines data changes (e.g., content loaded or line types change)
+    const ta = textareaRef.current;
+    const display = styledDisplayRef.current;
+    if (ta && display) {
+      display.scrollTop = ta.scrollTop;
+      display.scrollLeft = ta.scrollLeft;
+    }
+  }, [lines]);
 
   const getCursorLineIndex = () => {
     if (textareaRef.current) {
@@ -150,14 +181,39 @@ const SongEditor: React.FC<SongEditorProps> = ({
           <div className="text-xs text-muted-foreground mb-1">
             Scrivi o incolla il testo e gli accordi qui. Posiziona il cursore sulla riga desiderata e usa i pulsanti sotto per definirne il tipo.
           </div>
-          <Textarea
-            id="content"
-            ref={textareaRef} // Ref per tracciare la posizione del cursore
-            value={content}
-            onChange={(e) => setContent(e.target.value)} // Aggiorna lo stato 'content' direttamente
-            placeholder="Incolla o scrivi qui il testo e gli accordi della canzone..."
-            className="font-mono min-h-[300px] w-full"
-          />
+          <div className="relative w-full font-mono text-sm" style={{ minHeight: '300px' }}>
+            <div
+              ref={styledDisplayRef}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden whitespace-pre-wrap break-words px-3 py-2"
+              style={{ lineHeight: `${lineHeightPx}px` }}
+            >
+              {lines.map((line, index) => (
+                <div
+                  key={index}
+                  className={`${line.isChordLine ? 'text-blue-600' : 'text-current'}`}
+                  style={{ height: `${lineHeightPx}px` }}
+                >
+                  {line.content.length > 0 ? line.content : '\u00A0'} {/* Non-breaking space for empty lines */}
+                </div>
+              ))}
+            </div>
+            <Textarea
+              id="content"
+              ref={textareaRef} // Ref per tracciare la posizione del cursore
+              value={content}
+              onChange={(e) => setContent(e.target.value)} // Aggiorna lo stato 'content' direttamente
+              placeholder=" " // Minimal placeholder to avoid visual clash
+              className="font-mono text-sm min-h-[300px] w-full bg-transparent px-3 py-2"
+              style={{
+                color: 'transparent',
+                caretColor: 'hsl(var(--foreground))', // Use theme foreground color for caret
+                lineHeight: `${lineHeightPx}px`,
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'break-word',
+                resize: 'none',
+              }}
+            />
+          </div>
           <div className="flex justify-start gap-2 mt-2">
             <Button type="button" onClick={() => setLineTypeAtCursor(true)} variant="outline" size="sm">
               <Music className="h-4 w-4 mr-2" /> Imposta Riga Corrente come Accordi
@@ -168,33 +224,7 @@ const SongEditor: React.FC<SongEditorProps> = ({
           </div>
         </div>
         
-        {/* Anteprima opzionale dei tipi di riga */} 
-        {lines.length > 0 && (
-          <div className="space-y-2 mt-6 pt-4 border-t">
-            <Label>Anteprima Tipi di Riga (Non Editabile Direttamente Qui)</Label>
-            <div className="text-xs text-muted-foreground mb-3">
-              Questa è una visualizzazione di come le righe sono attualmente interpretate in base al testo sopra e alle tue selezioni.
-            </div>
-            <div className="space-y-1 border rounded-md p-4 max-h-[200px] overflow-y-auto bg-muted/30">
-              {lines.map((line, index) => (
-                <div key={index} 
-                     className={`flex items-center p-1.5 rounded-sm text-sm transition-colors duration-150 ease-in-out 
-                                 ${line.isChordLine ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-gray-50 border-l-4 border-gray-400'}`}>
-                  <span className={`mr-3 w-20 flex-shrink-0 text-right pr-3 font-medium 
-                                   ${line.isChordLine ? 'text-blue-700' : 'text-gray-600'}`}>
-                    {line.isChordLine ? "Accordi" : "Testo"}
-                  </span>
-                  <span 
-                    className={`flex-grow ${line.isChordLine ? "font-mono text-blue-800" : "text-gray-800"}`}
-                    style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}
-                  >
-                    {line.content.trim() === '' ? <span className="italic text-gray-400">[Riga Vuota]</span> : line.content}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         </CardContent>
         {/* The save button is now in EditSong.tsx */}
